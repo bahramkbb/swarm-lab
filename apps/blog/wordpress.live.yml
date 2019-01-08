@@ -1,0 +1,54 @@
+version: '3.6'
+
+services:
+   db:
+     image: mysql:5.7
+     volumes:
+       - db_data:/var/lib/mysql
+     restart: always
+     networks:
+       - backend
+     environment:
+       MYSQL_ROOT_PASSWORD: somewordpress
+       MYSQL_DATABASE: wordpress
+       MYSQL_USER: wordpress
+       MYSQL_PASSWORD: wordpress
+
+   wordpress:
+     depends_on:
+       - db
+     image: wordpress:latest
+     restart: always
+     networks:
+       - gateway
+       - backend
+     environment:
+       WORDPRESS_DB_HOST: db:3306
+       WORDPRESS_DB_USER: wordpress
+       WORDPRESS_DB_PASSWORD: wordpress
+     deploy:
+       replicas: 1
+       resources:
+         limits:
+           cpus: '1'
+           memory: 1G
+         reservations:
+           cpus: '0.1'
+           memory: 64M
+       placement:
+         constraints:
+           - node.role == worker
+       labels:
+         - "traefik.enable=true"
+         - "traefik.port=80"
+         - "traefik.docker.network=gateway"
+         - "traefik.frontend.rule=Host:blog.localhost"
+
+volumes:
+    db_data: {}
+
+networks:
+  gateway:
+    driver: overlay
+    external: true
+  backend:
